@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maison D'Parfum — Payroll</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f0f2;font-size:13px;color:#222}
+header{background:#1a1a2e;color:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:18px;font-weight:700}
+header span{font-size:12px;color:#aaa}
+.nav{background:#fff;border-bottom:2px solid #e0e0e0;display:flex}
+.nav button{padding:11px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:#666;border-bottom:3px solid transparent;font-family:Arial;font-weight:500}
+.nav button.active{color:#1a1a2e;border-bottom:3px solid #1a1a2e;font-weight:700}
+.page{display:none;padding:20px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+.week-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#fff;padding:12px 16px;border-radius:10px;border:1px solid #e0e0e0;flex-wrap:wrap}
+.week-bar span{font-size:15px;font-weight:700;color:#1a1a2e;flex:1;text-align:center}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:Arial;font-weight:600}
+.btn-dark{background:#1a1a2e;color:#fff}
+.btn-gray{background:#f0f0f0;color:#333;border:1px solid #ddd}
+.btn-gray:hover{background:#e4e4e4}
+.btn-red{background:#fff;color:#c0392b;border:1px solid #e8c0bc}
+.emp-block{background:#fff;border-radius:10px;border:1px solid #ddd;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.emp-head{background:#1a1a2e;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center}
+.ename{font-size:15px;font-weight:700}
+.erate{font-size:11px;color:#aaa;margin-top:1px}
+.etot-lbl{font-size:9px;color:#aaa;text-align:right;text-transform:uppercase;letter-spacing:.5px}
+.etot-val{font-size:18px;font-weight:700;text-align:right}
+.eval-bar{padding:7px 14px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;min-height:32px;background:#fff}
+.eval-text{font-size:12px;color:#555;font-style:italic;flex:1}
+.eval-btn{background:#1a1a2e;border:none;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;font-family:Arial;white-space:nowrap}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:4px 3px;text-align:center;border:1px solid #e0e0e0;font-size:9px;font-weight:700;color:#555;text-transform:uppercase;background:#f7f7f7;white-space:nowrap}
+th.th-b{background:#d6eaff;color:#0C447C}
+th.th-n{background:#fff0d6;color:#854F0B}
+th.th-s{background:#d6f0dc;color:#1B5E20}
+th.th-t{background:#1a1a2e;color:#fff}
+td{border:1px solid #eee;vertical-align:middle;text-align:center;padding:0}
+td.date-cell{padding:3px 5px;color:#666;font-size:10px;font-weight:600;background:#fafafa;white-space:nowrap;width:60px}
+td.inp-cell input{width:100%;border:none;padding:2px 3px;font-size:12px;font-family:Arial;text-align:center;background:transparent;outline:none;color:#222}
+td.inp-cell input:focus{background:#f0f8ff}
+td.nc-cell{background:#fffbf0}
+td.nc-cell input{width:100%;border:none;padding:2px 3px;font-size:12px;font-family:Arial;text-align:center;background:transparent;outline:none;color:#854F0B;font-weight:700}
+td.ovr-cell{background:#f5f0ff}
+td.ovr-cell input{width:100%;border:none;padding:2px 3px;font-size:12px;font-family:Arial;text-align:center;background:transparent;outline:none;color:#5b2d8e;font-weight:700}
+td.out{padding:2px 4px;font-weight:700;font-size:12px;color:#ccc}
+td.out.bv{color:#185FA5}
+td.out.nv{color:#854F0B}
+td.out.sv{color:#2E7D32}
+td.out.tv{color:#1a1a2e;font-size:13px}
+tr.hr-row{background:#fffbf2}
+tfoot tr td{background:#f0f0f0;font-weight:700;border-top:2px solid #ccc;padding:4px 5px;font-size:11px}
+tfoot tr td.bv{color:#185FA5}
+tfoot tr td.nv{color:#854F0B}
+tfoot tr td.sv{color:#2E7D32}
+tfoot tr td.tv{color:#1a1a2e}
+.card{background:#fff;border-radius:10px;padding:18px;margin-bottom:18px;border:1px solid #e0e0e0}
+.card h2{font-size:14px;font-weight:700;margin-bottom:14px;color:#1a1a2e}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.fg input{padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:13px;font-family:Arial}
+.fg input:focus{outline:none;border-color:#1a1a2e}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#f0f0f0;border:1.5px solid #ddd;border-radius:20px;padding:5px 14px;font-size:13px;margin:4px;font-weight:600}
+.rm{cursor:pointer;color:#c0392b;font-size:15px;margin-left:4px}
+.rule{background:#fffbf0;border:1px solid #f0d0a0;border-radius:8px;padding:14px;font-size:12px;line-height:2;color:#555;margin-top:14px}
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1a2e;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:999}
+.saving{position:fixed;top:16px;right:16px;background:#2E7D32;color:#fff;padding:6px 14px;border-radius:20px;font-size:11px;display:none;z-index:999}
+.loading{text-align:center;padding:60px;color:#aaa;font-size:16px}
+@media print{header,.nav,.week-bar button,.week-bar label,.week-bar input[type=date],.eval-btn{display:none!important}.page{display:block!important;padding:0}.emp-block{page-break-inside:avoid;margin-bottom:14px;box-shadow:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Maison D'Parfum &mdash; Payroll</h1>
+  <span id="hdr-week"></span>
+</header>
+<div class="nav">
+  <button class="active" onclick="goTo('payroll',this)">Payroll</button>
+  <button onclick="goTo('employees',this)">Employees</button>
+</div>
+
+<div id="page-payroll" class="page active">
+  <div class="week-bar">
+    <button class="btn btn-gray" onclick="shiftWeek(-1)">&larr; Prev</button>
+    <span id="week-label">-</span>
+    <button class="btn btn-gray" onclick="shiftWeek(1)">Next &rarr;</button>
+    <label style="font-size:11px;color:#888;font-weight:600;white-space:nowrap">Go to week:</label>
+    <input type="date" id="week-picker" onchange="goToDate(this.value)" style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:Arial">
+    <button class="btn btn-gray" onclick="window.print()">Print / PDF</button>
+    <button class="btn btn-gray" onclick="copyWA()">Copy (WhatsApp)</button>
+    <button class="btn btn-red" onclick="resetWeek()">Reset Week</button>
+  </div>
+  <div id="payroll-area"><div class="loading">Loading...</div></div>
+</div>
+
+<div id="page-employees" class="page">
+  <div class="card">
+    <h2>Add Employee</h2>
+    <div class="row2">
+      <div class="fg"><label>Name</label><input type="text" id="e-name" placeholder="e.g. Dylan"></div>
+      <div class="fg"><label>Hourly Rate (US$)</label><input type="number" id="e-rate" value="10" step="0.01"></div>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn btn-dark" onclick="addEmp()">Add Employee</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Employees</h2>
+    <div id="emp-list"><div class="loading">Loading...</div></div>
+  </div>
+  <div class="rule">
+    <b>Pay Rules:</b><br>
+    Total Sales &lt; $600 &rarr; hours x hourly rate + bonus<br>
+    Total Sales &ge; $600 &rarr; commission:<br>
+    &nbsp;&nbsp;NC = Total Sales &minus; Spare &minus; Brand<br>
+    &nbsp;&nbsp;$600-999: Spare &ge;$45 = 20%, else 15%<br>
+    &nbsp;&nbsp;$1000-1499: Spare &ge;$110 = 25%, else 20%<br>
+    &nbsp;&nbsp;$1500+: Spare &ge;$195 = 30%, else 25%<br>
+    &nbsp;&nbsp;Spare = 30% | Brand = 5% | Bonus = manual<br>
+    &nbsp;&nbsp;% Override = force any NC %
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="saving" id="saving">&#10003; Saving...</div>
+
+<script>
+var SUPA_URL = 'https://qynikzfccrujxevztccw.supabase.co';
+var SUPA_KEY = 'sb_publishable_Tdn6F2S0zjEk49W0rdmjJg_aw0TymgT';
+var supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+var emps = [];
+var days = {};
+var wkStart = getMon(new Date());
+var saveTimer = null;
+var DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function getMon(d) {
+  var c = new Date(d);
+  var day = c.getDay();
+  c.setDate(c.getDate() - (day === 0 ? 6 : day - 1));
+  c.setHours(0,0,0,0);
+  return c;
+}
+function getWkDates() {
+  var out = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(wkStart);
+    d.setDate(wkStart.getDate() + i);
+    out.push(d.toISOString().split('T')[0]);
+  }
+  return out;
+}
+function fd(iso) { return iso.slice(5).replace('-','/'); }
+function fm(v) { return '$' + Math.round(v || 0); }
+function gv(id) { var e = document.getElementById(id); return e ? (parseFloat(e.value) || 0) : 0; }
+function se(id, txt, cls) { var e = document.getElementById(id); if (!e) return; e.textContent = txt; if (cls !== undefined) e.className = cls; }
+function key(eid, date) { return 'e' + eid + '_' + date; }
+
+function updLbl() {
+  var dates = getWkDates();
+  var lbl = 'Week: ' + fd(dates[0]) + ' - ' + fd(dates[6]);
+  document.getElementById('week-label').textContent = lbl;
+  document.getElementById('hdr-week').textContent = lbl;
+  var pk = document.getElementById('week-picker');
+  if (pk) pk.value = dates[0];
+}
+
+function shiftWeek(dir) {
+  wkStart.setDate(wkStart.getDate() + dir * 7);
+  loadWeekData();
+}
+function goToDate(val) {
+  if (!val) return;
+  wkStart = getMon(new Date(val + 'T12:00:00'));
+  loadWeekData();
+}
+function goTo(pg, el) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('page-' + pg).classList.add('active');
+  el.classList.add('active');
+  if (pg === 'payroll') render();
+  if (pg === 'employees') renderEmps();
+}
+
+function calcPay(nc, br, sp, hrs, bon, rate, ovr) {
+  nc=+nc||0; br=+br||0; sp=+sp||0; hrs=+hrs||0; bon=+bon||0; rate=+rate||10; ovr=+ovr||0;
+  var tot = nc + br + sp;
+  if (tot < 600) return {type:'h', pay:(hrs*rate)+bon, ncP:0, bP:0, sP:0, boP:bon};
+  var ncR;
+  if (ovr > 0) { ncR = ovr / 100; }
+  else if (tot >= 1500) { ncR = sp >= 195 ? 0.30 : 0.25; }
+  else if (tot >= 1000) { ncR = sp >= 110 ? 0.25 : 0.20; }
+  else { ncR = sp >= 45 ? 0.20 : 0.15; }
+  var ncP=nc*ncR, bP=br*0.05, sP=sp*0.30, boP=bon;
+  return {type:'c', pay:ncP+bP+sP+boP, ncP:ncP, bP:bP, sP:sP, boP:boP, ncR:ncR};
+}
+
+async function loadEmps() {
+  var res = await supa.from('employees').select('*').order('name');
+  if (res.data) emps = res.data;
+  renderEmps();
+}
+
+async function loadWeekData() {
+  days = {};
+  var dates = getWkDates();
+  var res = await supa.from('payroll_days').select('*').eq('week_start', dates[0]);
+  if (res.data) {
+    res.data.forEach(function(r) {
+      days[key(r.emp_id, r.date)] = {tot:r.total_sales, br:r.brand, sp:r.spare, nc:r.nc, hrs:r.hours, bon:r.bonus, ovr:r.ovr||0};
+    });
+  }
+  render();
+}
+
+async function saveDay(eid, date) {
+  var k = key(eid, date);
+  var d = days[k];
+  if (!d) return;
+  await supa.from('payroll_days').upsert({
+    emp_id:eid, date:date, week_start:getWkDates()[0],
+    total_sales:d.tot||0, brand:d.br||0, spare:d.sp||0, nc:d.nc||0,
+    hours:d.hrs||0, bonus:d.bon||0, ovr:d.ovr||0
+  }, {onConflict:'emp_id,date'});
+}
+
+async function addEmp() {
+  var name = document.getElementById('e-name').value.trim();
+  var rate = parseFloat(document.getElementById('e-rate').value) || 10;
+  if (!name) { toast('Enter a name!'); return; }
+  var res = await supa.from('employees').insert({name:name, rate:rate}).select();
+  if (res.data) { emps.push(res.data[0]); emps.sort(function(a,b){return a.name.localeCompare(b.name);}); }
+  document.getElementById('e-name').value = '';
+  renderEmps(); render(); toast(name + ' added!');
+}
+
+async function removeEmp(id) {
+  if (!confirm('Remove this employee?')) return;
+  await supa.from('employees').delete().eq('id', id);
+  emps = emps.filter(function(e) { return e.id !== id; });
+  renderEmps(); render();
+}
+
+function renderEmps() {
+  var el = document.getElementById('emp-list');
+  if (!emps.length) { el.innerHTML = '<p style="color:#aaa">No employees yet.</p>'; return; }
+  el.innerHTML = emps.map(function(e) {
+    return '<span class="chip">' + e.name
+      + ' <span style="color:#888;font-weight:400;font-size:11px">$' + e.rate + '/hr</span>'
+      + '<span class="rm" onclick="removeEmp(' + e.id + ')">&times;</span></span>';
+  }).join('');
+}
+
+function onInput(el) {
+  var eid = parseInt(el.getAttribute('data-eid'));
+  var date = el.getAttribute('data-date');
+  var k = key(eid, date);
+  var tot=gv('tot_'+k), br=gv('br_'+k), sp=gv('sp_'+k), hrs=gv('hrs_'+k), bon=gv('bon_'+k), ovr=gv('ovr_'+k);
+  var nc = Math.max(0, tot - br - sp);
+  var ncEl = document.getElementById('nc_'+k);
+  if (ncEl) ncEl.value = nc > 0 ? nc : '';
+  days[k] = {tot:tot, br:br, sp:sp, nc:nc, hrs:hrs, bon:bon, ovr:ovr};
+  var emp = emps.find(function(e) { return e.id === eid; });
+  var r = calcPay(nc, br, sp, hrs, bon, emp ? emp.rate : 10, ovr);
+  paintRow(k, r, hrs, emp ? emp.rate : 10);
+  paintTotals(eid);
+  clearTimeout(saveTimer);
+  var saving = document.getElementById('saving');
+  if (saving) saving.style.display = 'block';
+  saveTimer = setTimeout(function() {
+    saveDay(eid, date).then(function() { if (saving) saving.style.display = 'none'; });
+  }, 800);
+}
+
+function paintRow(k, r, hrs, rate) {
+  var row = document.getElementById('row_'+k);
+  if (r.type === 'h') {
+    if (row) row.className = 'hr-row';
+    se('obr_'+k,'$0','out'); se('onc_'+k,'$0','out'); se('osp_'+k,'$0','out');
+    se('oto_'+k, fm(r.pay), 'out tv');
+  } else {
+    if (row) row.className = '';
+    se('obr_'+k, fm(r.bP), 'out bv'); se('onc_'+k, fm(r.ncP), 'out nv');
+    se('osp_'+k, fm(r.sP), 'out sv'); se('oto_'+k, fm(r.pay), 'out tv');
+  }
+}
+
+function paintTotals(eid) {
+  var dates = getWkDates();
+  var emp = emps.find(function(e) { return e.id === eid; });
+  var totPay=0,totB=0,totNC=0,totS=0,totSales=0,totSpare=0,totHrs=0,totBonus=0,totBrandRaw=0,totNCRaw=0;
+  dates.forEach(function(date) {
+    var d = days[key(eid,date)]; if (!d) return;
+    var r = calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp?emp.rate:10,d.ovr||0);
+    totPay+=r.pay; totB+=r.bP; totNC+=r.ncP; totS+=r.sP;
+    totSales+=(+d.tot||0); totSpare+=(+d.sp||0); totHrs+=(+d.hrs||0); totBonus+=(+d.bon||0);
+    totBrandRaw+=(+d.br||0); totNCRaw+=(+d.nc||0);
+  });
+  se('htot_'+eid, fm(totPay));
+  se('tfb_'+eid,fm(totB)); se('tfnc_'+eid,fm(totNC)); se('tfs_'+eid,fm(totS)); se('tft_'+eid,fm(totPay));
+  var setEl=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v||'';};
+  setEl('tftot_'+eid, totSales>0?'$'+Math.round(totSales):'');
+  setEl('tfbrand_'+eid, totBrandRaw>0?'$'+Math.round(totBrandRaw):'');
+  setEl('tfsp_'+eid, totSpare>0?'$'+Math.round(totSpare):'');
+  setEl('tfnc_raw_'+eid, totNCRaw>0?'$'+Math.round(totNCRaw):'');
+  setEl('tfhrs_'+eid, totHrs>0?totHrs+'h':'');
+  setEl('tfbon_'+eid, totBonus>0?'$'+Math.round(totBonus):'');
+}
+
+function render() {
+  updLbl();
+  var area = document.getElementById('payroll-area');
+  if (!emps.length) { area.innerHTML='<div class="card" style="text-align:center;color:#aaa;padding:40px">Go to Employees tab and add your team first.</div>'; return; }
+  var dates = getWkDates();
+  area.innerHTML = emps.map(function(emp) { return buildBlock(emp, dates); }).join('');
+  emps.forEach(function(emp) {
+    dates.forEach(function(date) {
+      var k = key(emp.id,date), d = days[k]; if (!d) return;
+      var sv=function(id,v){var e=document.getElementById(id);if(e&&v)e.value=v;};
+      sv('tot_'+k,d.tot); sv('br_'+k,d.br); sv('sp_'+k,d.sp);
+      sv('hrs_'+k,d.hrs); sv('bon_'+k,d.bon);
+      if (d.ovr>0) sv('ovr_'+k,d.ovr);
+      var ne=document.getElementById('nc_'+k); if(ne&&d.nc>0) ne.value=d.nc;
+      var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
+      paintRow(k,r,d.hrs,emp.rate);
+    });
+    paintTotals(emp.id);
+  });
+}
+
+function buildBlock(emp, dates) {
+  var eid = emp.id;
+  var rows = dates.map(function(date,i) {
+    var k = key(eid,date);
+    var oi = 'onInput(this)';
+    return '<tr id="row_'+k+'">'
+      +'<td class="date-cell">'+DAY_NAMES[i]+'<br><span style="color:#aaa;font-size:10px">'+fd(date)+'</span></td>'
+      +'<td class="inp-cell"><input type="number" id="tot_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.01" oninput="'+oi+'"></td>'
+      +'<td class="inp-cell"><input type="number" id="br_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.01" oninput="'+oi+'"></td>'
+      +'<td class="inp-cell"><input type="number" id="sp_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.01" oninput="'+oi+'"></td>'
+      +'<td class="nc-cell"><input type="number" id="nc_'+k+'" readonly></td>'
+      +'<td class="inp-cell"><input type="number" id="hrs_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.5" oninput="'+oi+'"></td>'
+      +'<td class="inp-cell"><input type="number" id="bon_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.01" oninput="'+oi+'"></td>'
+      +'<td class="ovr-cell"><input type="number" id="ovr_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" max="100" step="5" placeholder="auto" oninput="'+oi+'"></td>'
+      +'<td class="out" id="obr_'+k+'">$0</td>'
+      +'<td class="out" id="onc_'+k+'">$0</td>'
+      +'<td class="out" id="osp_'+k+'">$0</td>'
+      +'<td class="out" id="oto_'+k+'">$0</td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div class="emp-block">'
+    +'<div class="emp-head">'
+      +'<div><div class="ename">'+emp.name+'</div>'
+      +'<div class="erate">'+fd(dates[0])+' - '+fd(dates[6])+'</div></div>'
+      +'<div><div class="etot-lbl">TOTAL</div><div class="etot-val" id="htot_'+eid+'">$0</div></div>'
+    +'</div>'
+    +'<div class="eval-bar">'
+      +'<span class="eval-text" id="eval_'+eid+'">&#10024; Click Evaluate for AI performance review</span>'
+      +'<button class="eval-btn" onclick="getEval('+eid+')">Evaluate &#10024;</button>'
+    +'</div>'
+    +'<div class="tbl-wrap"><table>'
+      +'<thead><tr>'
+        +'<th style="width:55px">Date</th>'
+        +'<th style="width:75px">Total Sales</th>'
+        +'<th class="th-b" style="width:55px">Brand</th>'
+        +'<th class="th-s" style="width:55px">Spare</th>'
+        +'<th class="th-n" style="width:70px">New Collection</th>'
+        +'<th style="width:48px">Hours</th>'
+        +'<th style="width:50px">Bonus</th>'
+        +'<th style="background:#e8e0f0;color:#5b2d8e;width:50px">% OVR</th>'
+        +'<th class="th-b" style="width:55px">5% Brand</th>'
+        +'<th class="th-n" style="width:60px">15-30% NC</th>'
+        +'<th class="th-s" style="width:58px">30% Spare</th>'
+        +'<th class="th-t" style="width:65px">Total</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody>'
+      +'<tfoot><tr>'
+        +'<td style="text-align:left;padding:5px 8px">TOTAL</td>'
+        +'<td id="tftot_'+eid+'"></td>'
+        +'<td id="tfbrand_'+eid+'"></td>'
+        +'<td id="tfsp_'+eid+'"></td>'
+        +'<td id="tfnc_raw_'+eid+'"></td>'
+        +'<td id="tfhrs_'+eid+'"></td>'
+        +'<td id="tfbon_'+eid+'"></td>'
+        +'<td></td>'
+        +'<td class="bv" id="tfb_'+eid+'">$0</td>'
+        +'<td class="nv" id="tfnc_'+eid+'">$0</td>'
+        +'<td class="sv" id="tfs_'+eid+'">$0</td>'
+        +'<td class="tv" id="tft_'+eid+'">$0</td>'
+      +'</tr></tfoot>'
+    +'</table></div>'
+  +'</div>';
+}
+
+async function getEval(eid) {
+  var emp = emps.find(function(e){return e.id===eid;});
+  if (!emp) return;
+  var dates = getWkDates();
+  var evalEl = document.getElementById('eval_'+eid);
+  if (!evalEl) return;
+  evalEl.textContent = 'Analyzing...';
+  var commDays=0,hourDays=0,totSales=0,totPay=0;
+  dates.forEach(function(date) {
+    var d=days[key(eid,date)]; if(!d||(!d.tot&&!d.hrs)) return;
+    var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
+    totPay+=r.pay; totSales+=(+d.tot||0);
+    if(r.type==='c') commDays++; else hourDays++;
+  });
+  if(commDays+hourDays===0){evalEl.textContent='No data this week yet.';return;}
+  try {
+    var nl=String.fromCharCode(10);
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:120,
+        system:'You are a motivational sales manager at Maison DParfum. Write a SHORT 1-2 sentence performance evaluation. Be encouraging but honest. If mostly hourly days push to sell more. If commission days celebrate. Fun energetic 1 emoji. Max 120 chars.',
+        messages:[{role:'user',content:emp.name+' worked '+(commDays+hourDays)+' days. '+commDays+' commission '+hourDays+' hourly. Sales $'+Math.round(totSales)+'. Pay $'+Math.round(totPay)+'.'}]
+      })
+    });
+    var data=await res.json();
+    evalEl.textContent=data.content&&data.content[0]?data.content[0].text:'Keep pushing! 💪';
+  } catch(e) { evalEl.textContent='Keep pushing this week, every sale counts! 🔥'; }
+}
+
+async function resetWeek() {
+  if(!confirm('Clear all data for this week?')) return;
+  var dates=getWkDates();
+  await supa.from('payroll_days').delete().eq('week_start',dates[0]);
+  days={}; render(); toast('Week cleared!');
+}
+
+function copyWA() {
+  var nl=String.fromCharCode(10);
+  var dates=getWkDates();
+  var txt='*MAISON DPARFUM - PAYCHECKS*'+nl+'Week: '+fd(dates[0])+' - '+fd(dates[6])+nl+nl;
+  emps.forEach(function(emp) {
+    var total=0; txt+='*'+emp.name+'*'+nl;
+    dates.forEach(function(date) {
+      var d=days[key(emp.id,date)]; if(!d||(!d.tot&&!d.hrs)) return;
+      var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
+      total+=r.pay;
+      if(r.type==='h') txt+=fd(date)+': '+d.hrs+'h x $'+emp.rate+' = $'+Math.round(r.pay)+' (hourly)'+nl;
+      else txt+=fd(date)+': Sale $'+d.tot+' -> $'+Math.round(r.pay)+nl;
+    });
+    txt+='TOTAL: $'+Math.round(total)+nl+nl;
+  });
+  navigator.clipboard.writeText(txt).then(function(){toast('Copied!');});
+}
+
+function toast(msg) {
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  setTimeout(function(){t.style.display='none';},2500);
+}
+
+async function init() {
+  await loadEmps();
+  if (emps.length===0) {
+    var defaults=['Dylan','Guilherme','Lara','Manuella','Natalia','Rafael','Tiago'];
+    for(var i=0;i<defaults.length;i++) {
+      var res=await supa.from('employees').insert({name:defaults[i],rate:10}).select();
+      if(res.data) emps.push(res.data[0]);
+    }
+    emps.sort(function(a,b){return a.name.localeCompare(b.name);});
+    renderEmps();
+  }
+  await loadWeekData();
+}
+
+init();
+</script>
+</body>
+</html>
