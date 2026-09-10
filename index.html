@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MDP</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f0f0f2;font-size:13px;color:#222}
@@ -21,7 +20,6 @@ header span{font-size:12px;color:#aaa}
 .btn{padding:8px 16px;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:Arial;font-weight:600}
 .btn-dark{background:#1a1a2e;color:#fff}
 .btn-gray{background:#f0f0f0;color:#333;border:1px solid #ddd}
-.btn-gray:hover{background:#e4e4e4}
 .btn-red{background:#fff;color:#c0392b;border:1px solid #e8c0bc}
 .emp-block{background:#fff;border-radius:10px;border:1px solid #ddd;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .emp-head{background:#1a1a2e;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center}
@@ -31,7 +29,7 @@ header span{font-size:12px;color:#aaa}
 .etot-val{font-size:18px;font-weight:700;text-align:right}
 .eval-bar{padding:7px 14px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;min-height:32px;background:#fff}
 .eval-text{font-size:12px;color:#555;font-style:italic;flex:1}
-.eval-btn{background:#1a1a2e;border:none;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;font-family:Arial;white-space:nowrap}
+.eval-btn{background:#1a1a2e;border:none;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;font-family:Arial}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{padding:4px 3px;text-align:center;border:1px solid #e0e0e0;font-size:9px;font-weight:700;color:#555;text-transform:uppercase;background:#f7f7f7;white-space:nowrap}
@@ -70,13 +68,13 @@ tfoot tr td.tv{color:#1a1a2e}
 .rule{background:#fffbf0;border:1px solid #f0d0a0;border-radius:8px;padding:14px;font-size:12px;line-height:2;color:#555;margin-top:14px}
 .toast{position:fixed;bottom:20px;right:20px;background:#1a1a2e;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:999}
 .saving{position:fixed;top:16px;right:16px;background:#2E7D32;color:#fff;padding:6px 14px;border-radius:20px;font-size:11px;display:none;z-index:999}
-.loading{text-align:center;padding:60px;color:#aaa;font-size:16px}
+.status{text-align:center;padding:40px;color:#666;font-size:14px}
 @media print{header,.nav,.week-bar button,.week-bar label,.week-bar input[type=date],.eval-btn{display:none!important}.page{display:block!important;padding:0}.emp-block{page-break-inside:avoid;margin-bottom:14px;box-shadow:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>Maison D'Parfum &mdash; Payroll</h1>
+  <h1>MDP</h1>
   <span id="hdr-week"></span>
 </header>
 <div class="nav">
@@ -95,7 +93,7 @@ tfoot tr td.tv{color:#1a1a2e}
     <button class="btn btn-gray" onclick="copyWA()">Copy (WhatsApp)</button>
     <button class="btn btn-red" onclick="resetWeek()">Reset Week</button>
   </div>
-  <div id="payroll-area"><div class="loading">Loading...</div></div>
+  <div id="payroll-area"><div class="status">Loading...</div></div>
 </div>
 
 <div id="page-employees" class="page">
@@ -111,18 +109,17 @@ tfoot tr td.tv{color:#1a1a2e}
   </div>
   <div class="card">
     <h2>Employees</h2>
-    <div id="emp-list"><div class="loading">Loading...</div></div>
+    <div id="emp-list"><div class="status">Loading...</div></div>
   </div>
   <div class="rule">
     <b>Pay Rules:</b><br>
     Total Sales &lt; $600 &rarr; hours x hourly rate + bonus<br>
     Total Sales &ge; $600 &rarr; commission:<br>
-    &nbsp;&nbsp;NC = Total Sales &minus; Spare &minus; Brand<br>
-    &nbsp;&nbsp;$600-999: Spare &ge;$45 = 20%, else 15%<br>
-    &nbsp;&nbsp;$1000-1499: Spare &ge;$110 = 25%, else 20%<br>
-    &nbsp;&nbsp;$1500+: Spare &ge;$195 = 30%, else 25%<br>
-    &nbsp;&nbsp;Spare = 30% | Brand = 5% | Bonus = manual<br>
-    &nbsp;&nbsp;% Override = force any NC %
+    &nbsp;&nbsp;NC = Total Sales - Spare - Brand<br>
+    &nbsp;&nbsp;$600-999: Spare &ge;$45=20%, else 15%<br>
+    &nbsp;&nbsp;$1000-1499: Spare &ge;$110=25%, else 20%<br>
+    &nbsp;&nbsp;$1500+: Spare &ge;$195=30%, else 25%<br>
+    &nbsp;&nbsp;Spare=30% | Brand=5% | Bonus=manual | %OVR=force NC%
   </div>
 </div>
 
@@ -130,9 +127,50 @@ tfoot tr td.tv{color:#1a1a2e}
 <div class="saving" id="saving">&#10003; Saving...</div>
 
 <script>
-var SUPA_URL = 'https://qynikzfccrujxevztccw.supabase.co';
-var SUPA_KEY = 'sb_publishable_Tdn6F2S0zjEk49W0rdmjJg_aw0TymgT';
-var supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+// Direct Supabase REST API - no SDK needed
+var BASE = 'https://qynikzfccrujxevztccw.supabase.co/rest/v1';
+var KEY  = 'sb_publishable_Tdn6F2S0zjEk49W0rdmjJg_aw0TymgT';
+
+function hdr(extra) {
+  var h = {'Content-Type':'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY};
+  if (extra) Object.assign(h, extra);
+  return h;
+}
+
+async function dbGet(table, params) {
+  var url = BASE + '/' + table;
+  if (params) url += '?' + params;
+  var r = await fetch(url, {headers: hdr({'Prefer':'return=representation'})});
+  return r.json();
+}
+
+async function dbPost(table, body) {
+  var r = await fetch(BASE + '/' + table, {
+    method: 'POST', headers: hdr({'Prefer':'return=representation'}),
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function dbPatch(table, params, body) {
+  var r = await fetch(BASE + '/' + table + '?' + params, {
+    method: 'PATCH', headers: hdr({'Prefer':'return=representation'}),
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function dbUpsert(table, body) {
+  var r = await fetch(BASE + '/' + table, {
+    method: 'POST', headers: hdr({'Prefer':'return=representation,resolution=merge-duplicates'}),
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function dbDelete(table, params) {
+  await fetch(BASE + '/' + table + '?' + params, {method: 'DELETE', headers: hdr()});
+}
 
 var emps = [];
 var days = {};
@@ -141,24 +179,21 @@ var saveTimer = null;
 var DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 function getMon(d) {
-  var c = new Date(d);
-  var day = c.getDay();
+  var c = new Date(d), day = c.getDay();
   c.setDate(c.getDate() - (day === 0 ? 6 : day - 1));
-  c.setHours(0,0,0,0);
-  return c;
+  c.setHours(0,0,0,0); return c;
 }
 function getWkDates() {
   var out = [];
   for (var i = 0; i < 7; i++) {
-    var d = new Date(wkStart);
-    d.setDate(wkStart.getDate() + i);
+    var d = new Date(wkStart); d.setDate(wkStart.getDate() + i);
     out.push(d.toISOString().split('T')[0]);
   }
   return out;
 }
 function fd(iso) { return iso.slice(5).replace('-','/'); }
-function fm(v) { return '$' + Math.round(v || 0); }
-function gv(id) { var e = document.getElementById(id); return e ? (parseFloat(e.value) || 0) : 0; }
+function fm(v)   { return '$' + Math.round(v || 0); }
+function gv(id)  { var e = document.getElementById(id); return e ? (parseFloat(e.value) || 0) : 0; }
 function se(id, txt, cls) { var e = document.getElementById(id); if (!e) return; e.textContent = txt; if (cls !== undefined) e.className = cls; }
 function key(eid, date) { return 'e' + eid + '_' + date; }
 
@@ -171,15 +206,9 @@ function updLbl() {
   if (pk) pk.value = dates[0];
 }
 
-function shiftWeek(dir) {
-  wkStart.setDate(wkStart.getDate() + dir * 7);
-  loadWeekData();
-}
-function goToDate(val) {
-  if (!val) return;
-  wkStart = getMon(new Date(val + 'T12:00:00'));
-  loadWeekData();
-}
+function shiftWeek(dir) { wkStart.setDate(wkStart.getDate() + dir * 7); loadWeekData(); }
+function goToDate(val) { if (!val) return; wkStart = getMon(new Date(val + 'T12:00:00')); loadWeekData(); }
+
 function goTo(pg, el) {
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
@@ -194,56 +223,53 @@ function calcPay(nc, br, sp, hrs, bon, rate, ovr) {
   var tot = nc + br + sp;
   if (tot < 600) return {type:'h', pay:(hrs*rate)+bon, ncP:0, bP:0, sP:0, boP:bon};
   var ncR;
-  if (ovr > 0) { ncR = ovr / 100; }
-  else if (tot >= 1500) { ncR = sp >= 195 ? 0.30 : 0.25; }
-  else if (tot >= 1000) { ncR = sp >= 110 ? 0.25 : 0.20; }
-  else { ncR = sp >= 45 ? 0.20 : 0.15; }
+  if (ovr > 0) ncR = ovr / 100;
+  else if (tot >= 1500) ncR = sp >= 195 ? 0.30 : 0.25;
+  else if (tot >= 1000) ncR = sp >= 110 ? 0.25 : 0.20;
+  else ncR = sp >= 45 ? 0.20 : 0.15;
   var ncP=nc*ncR, bP=br*0.05, sP=sp*0.30, boP=bon;
-  return {type:'c', pay:ncP+bP+sP+boP, ncP:ncP, bP:bP, sP:sP, boP:boP, ncR:ncR};
+  return {type:'c', pay:ncP+bP+sP+boP, ncP:ncP, bP:bP, sP:sP, boP:boP};
 }
 
 async function loadEmps() {
-  var res = await supa.from('employees').select('*').order('name');
-  if (res.data) emps = res.data;
-  renderEmps();
+  try {
+    var data = await dbGet('employees', 'order=name');
+    if (Array.isArray(data)) emps = data;
+  } catch(e) { console.error('loadEmps error:', e); }
 }
 
 async function loadWeekData() {
   days = {};
-  var dates = getWkDates();
-  var res = await supa.from('payroll_days').select('*').eq('week_start', dates[0]);
-  if (res.data) {
-    res.data.forEach(function(r) {
-      days[key(r.emp_id, r.date)] = {tot:r.total_sales, br:r.brand, sp:r.spare, nc:r.nc, hrs:r.hours, bon:r.bonus, ovr:r.ovr||0};
-    });
-  }
+  try {
+    var dates = getWkDates();
+    var data = await dbGet('payroll_days', 'week_start=eq.' + dates[0]);
+    if (Array.isArray(data)) {
+      data.forEach(function(r) {
+        days[key(r.emp_id, r.date)] = {tot:r.total_sales, br:r.brand, sp:r.spare, nc:r.nc, hrs:r.hours, bon:r.bonus, ovr:r.ovr||0};
+      });
+    }
+  } catch(e) { console.error('loadWeekData error:', e); }
   render();
-}
-
-async function saveDay(eid, date) {
-  var k = key(eid, date);
-  var d = days[k];
-  if (!d) return;
-  await supa.from('payroll_days').upsert({
-    emp_id:eid, date:date, week_start:getWkDates()[0],
-    total_sales:d.tot||0, brand:d.br||0, spare:d.sp||0, nc:d.nc||0,
-    hours:d.hrs||0, bonus:d.bon||0, ovr:d.ovr||0
-  }, {onConflict:'emp_id,date'});
 }
 
 async function addEmp() {
   var name = document.getElementById('e-name').value.trim();
   var rate = parseFloat(document.getElementById('e-rate').value) || 10;
   if (!name) { toast('Enter a name!'); return; }
-  var res = await supa.from('employees').insert({name:name, rate:rate}).select();
-  if (res.data) { emps.push(res.data[0]); emps.sort(function(a,b){return a.name.localeCompare(b.name);}); }
+  try {
+    var data = await dbPost('employees', {name:name, rate:rate});
+    if (Array.isArray(data) && data[0]) {
+      emps.push(data[0]);
+      emps.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    }
+  } catch(e) { console.error(e); }
   document.getElementById('e-name').value = '';
   renderEmps(); render(); toast(name + ' added!');
 }
 
 async function removeEmp(id) {
   if (!confirm('Remove this employee?')) return;
-  await supa.from('employees').delete().eq('id', id);
+  await dbDelete('employees', 'id=eq.' + id);
   emps = emps.filter(function(e) { return e.id !== id; });
   renderEmps(); render();
 }
@@ -253,8 +279,8 @@ function renderEmps() {
   if (!emps.length) { el.innerHTML = '<p style="color:#aaa">No employees yet.</p>'; return; }
   el.innerHTML = emps.map(function(e) {
     return '<span class="chip">' + e.name
-      + ' <span style="color:#888;font-weight:400;font-size:11px">$' + e.rate + '/hr</span>'
-      + '<span class="rm" onclick="removeEmp(' + e.id + ')">&times;</span></span>';
+      + ' <span style="color:#888;font-weight:400;font-size:11px">$'+e.rate+'/hr</span>'
+      + '<span class="rm" onclick="removeEmp('+e.id+')">&times;</span></span>';
   }).join('');
 }
 
@@ -272,10 +298,13 @@ function onInput(el) {
   paintRow(k, r, hrs, emp ? emp.rate : 10);
   paintTotals(eid);
   clearTimeout(saveTimer);
-  var saving = document.getElementById('saving');
-  if (saving) saving.style.display = 'block';
+  var sEl = document.getElementById('saving');
+  if (sEl) sEl.style.display = 'block';
   saveTimer = setTimeout(function() {
-    saveDay(eid, date).then(function() { if (saving) saving.style.display = 'none'; });
+    dbUpsert('payroll_days', {
+      emp_id:eid, date:date, week_start:getWkDates()[0],
+      total_sales:tot, brand:br, spare:sp, nc:nc, hours:hrs, bonus:bon, ovr:ovr
+    }).then(function() { if (sEl) sEl.style.display = 'none'; });
   }, 800);
 }
 
@@ -287,8 +316,8 @@ function paintRow(k, r, hrs, rate) {
     se('oto_'+k, fm(r.pay), 'out tv');
   } else {
     if (row) row.className = '';
-    se('obr_'+k, fm(r.bP), 'out bv'); se('onc_'+k, fm(r.ncP), 'out nv');
-    se('osp_'+k, fm(r.sP), 'out sv'); se('oto_'+k, fm(r.pay), 'out tv');
+    se('obr_'+k,fm(r.bP),'out bv'); se('onc_'+k,fm(r.ncP),'out nv');
+    se('osp_'+k,fm(r.sP),'out sv'); se('oto_'+k,fm(r.pay),'out tv');
   }
 }
 
@@ -317,16 +346,19 @@ function paintTotals(eid) {
 function render() {
   updLbl();
   var area = document.getElementById('payroll-area');
-  if (!emps.length) { area.innerHTML='<div class="card" style="text-align:center;color:#aaa;padding:40px">Go to Employees tab and add your team first.</div>'; return; }
+  if (!emps.length) {
+    area.innerHTML = '<div class="card" style="text-align:center;color:#aaa;padding:40px">Go to Employees tab and add your team first.</div>';
+    return;
+  }
   var dates = getWkDates();
   area.innerHTML = emps.map(function(emp) { return buildBlock(emp, dates); }).join('');
   emps.forEach(function(emp) {
     dates.forEach(function(date) {
-      var k = key(emp.id,date), d = days[k]; if (!d) return;
+      var k=key(emp.id,date), d=days[k]; if (!d) return;
       var sv=function(id,v){var e=document.getElementById(id);if(e&&v)e.value=v;};
       sv('tot_'+k,d.tot); sv('br_'+k,d.br); sv('sp_'+k,d.sp);
       sv('hrs_'+k,d.hrs); sv('bon_'+k,d.bon);
-      if (d.ovr>0) sv('ovr_'+k,d.ovr);
+      if(d.ovr>0) sv('ovr_'+k,d.ovr);
       var ne=document.getElementById('nc_'+k); if(ne&&d.nc>0) ne.value=d.nc;
       var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
       paintRow(k,r,d.hrs,emp.rate);
@@ -338,8 +370,7 @@ function render() {
 function buildBlock(emp, dates) {
   var eid = emp.id;
   var rows = dates.map(function(date,i) {
-    var k = key(eid,date);
-    var oi = 'onInput(this)';
+    var k=key(eid,date), oi='onInput(this)';
     return '<tr id="row_'+k+'">'
       +'<td class="date-cell">'+DAY_NAMES[i]+'<br><span style="color:#aaa;font-size:10px">'+fd(date)+'</span></td>'
       +'<td class="inp-cell"><input type="number" id="tot_'+k+'" data-eid="'+eid+'" data-date="'+date+'" min="0" step="0.01" oninput="'+oi+'"></td>'
@@ -401,14 +432,12 @@ function buildBlock(emp, dates) {
 }
 
 async function getEval(eid) {
-  var emp = emps.find(function(e){return e.id===eid;});
-  if (!emp) return;
-  var dates = getWkDates();
-  var evalEl = document.getElementById('eval_'+eid);
-  if (!evalEl) return;
-  evalEl.textContent = 'Analyzing...';
+  var emp=emps.find(function(e){return e.id===eid;}); if(!emp) return;
+  var dates=getWkDates();
+  var evalEl=document.getElementById('eval_'+eid); if(!evalEl) return;
+  evalEl.textContent='Analyzing...';
   var commDays=0,hourDays=0,totSales=0,totPay=0;
-  dates.forEach(function(date) {
+  dates.forEach(function(date){
     var d=days[key(eid,date)]; if(!d||(!d.tot&&!d.hrs)) return;
     var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
     totPay+=r.pay; totSales+=(+d.tot||0);
@@ -420,19 +449,19 @@ async function getEval(eid) {
     var res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:120,
-        system:'You are a motivational sales manager at Maison DParfum. Write a SHORT 1-2 sentence performance evaluation. Be encouraging but honest. If mostly hourly days push to sell more. If commission days celebrate. Fun energetic 1 emoji. Max 120 chars.',
+        system:'You are a motivational sales manager at Maison DParfum. Write a SHORT 1-2 sentence performance evaluation. Be encouraging but honest. Fun energetic 1 emoji. Max 120 chars.',
         messages:[{role:'user',content:emp.name+' worked '+(commDays+hourDays)+' days. '+commDays+' commission '+hourDays+' hourly. Sales $'+Math.round(totSales)+'. Pay $'+Math.round(totPay)+'.'}]
       })
     });
     var data=await res.json();
     evalEl.textContent=data.content&&data.content[0]?data.content[0].text:'Keep pushing! 💪';
-  } catch(e) { evalEl.textContent='Keep pushing this week, every sale counts! 🔥'; }
+  } catch(e){evalEl.textContent='Keep pushing! 🔥';}
 }
 
 async function resetWeek() {
   if(!confirm('Clear all data for this week?')) return;
   var dates=getWkDates();
-  await supa.from('payroll_days').delete().eq('week_start',dates[0]);
+  await dbDelete('payroll_days','week_start=eq.'+dates[0]);
   days={}; render(); toast('Week cleared!');
 }
 
@@ -440,9 +469,9 @@ function copyWA() {
   var nl=String.fromCharCode(10);
   var dates=getWkDates();
   var txt='*MAISON DPARFUM - PAYCHECKS*'+nl+'Week: '+fd(dates[0])+' - '+fd(dates[6])+nl+nl;
-  emps.forEach(function(emp) {
+  emps.forEach(function(emp){
     var total=0; txt+='*'+emp.name+'*'+nl;
-    dates.forEach(function(date) {
+    dates.forEach(function(date){
       var d=days[key(emp.id,date)]; if(!d||(!d.tot&&!d.hrs)) return;
       var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);
       total+=r.pay;
@@ -454,7 +483,7 @@ function copyWA() {
   navigator.clipboard.writeText(txt).then(function(){toast('Copied!');});
 }
 
-function toast(msg) {
+function toast(msg){
   var t=document.getElementById('toast');
   t.textContent=msg; t.style.display='block';
   setTimeout(function(){t.style.display='none';},2500);
@@ -462,15 +491,16 @@ function toast(msg) {
 
 async function init() {
   await loadEmps();
-  if (emps.length===0) {
+  if (emps.length === 0) {
     var defaults=['Dylan','Guilherme','Lara','Manuella','Natalia','Rafael','Tiago'];
-    for(var i=0;i<defaults.length;i++) {
-      var res=await supa.from('employees').insert({name:defaults[i],rate:10}).select();
-      if(res.data) emps.push(res.data[0]);
+    for(var i=0;i<defaults.length;i++){
+      var data=await dbPost('employees',{name:defaults[i],rate:10});
+      if(Array.isArray(data)&&data[0]) emps.push(data[0]);
     }
     emps.sort(function(a,b){return a.name.localeCompare(b.name);});
     renderEmps();
   }
+  renderEmps();
   await loadWeekData();
 }
 
