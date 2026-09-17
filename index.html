@@ -246,9 +246,19 @@ async function dbPatch(table, params, body) {
 
 async function dbUpsert(table, body) {
   var r = await fetch(BASE + '/' + table, {
-    method: 'POST', headers: hdr({'Prefer':'return=representation,resolution=merge-duplicates'}),
+    method: 'POST', headers: hdr({
+      'Prefer': 'return=representation,resolution=merge-duplicates,on_conflict=emp_id,date'
+    }),
     body: JSON.stringify(body)
   });
+  if (r.status === 409) {
+    // Try PATCH instead
+    var patch = await fetch(BASE + '/' + table + '?emp_id=eq.' + body.emp_id + '&date=eq.' + body.date, {
+      method: 'PATCH', headers: hdr({'Prefer':'return=representation'}),
+      body: JSON.stringify(body)
+    });
+    return patch.json();
+  }
   return r.json();
 }
 
