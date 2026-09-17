@@ -245,21 +245,23 @@ async function dbPatch(table, params, body) {
 }
 
 async function dbUpsert(table, body) {
-  var r = await fetch(BASE + '/' + table, {
-    method: 'POST', headers: hdr({
-      'Prefer': 'return=representation,resolution=merge-duplicates,on_conflict=emp_id,date'
-    }),
+  // Always try PATCH first, if nothing updated then INSERT
+  var patch = await fetch(BASE + '/' + table + '?emp_id=eq.' + body.emp_id + '&date=eq.' + body.date, {
+    method: 'PATCH',
+    headers: hdr({'Prefer':'return=representation'}),
     body: JSON.stringify(body)
   });
-  if (r.status === 409) {
-    // Try PATCH instead
-    var patch = await fetch(BASE + '/' + table + '?emp_id=eq.' + body.emp_id + '&date=eq.' + body.date, {
-      method: 'PATCH', headers: hdr({'Prefer':'return=representation'}),
+  var patchData = await patch.json();
+  // If PATCH returned empty array, record doesn't exist yet - INSERT
+  if (Array.isArray(patchData) && patchData.length === 0) {
+    var ins = await fetch(BASE + '/' + table, {
+      method: 'POST',
+      headers: hdr({'Prefer':'return=representation'}),
       body: JSON.stringify(body)
     });
-    return patch.json();
+    return ins.json();
   }
-  return r.json();
+  return patchData;
 }
 
 async function dbDelete(table, params) {
