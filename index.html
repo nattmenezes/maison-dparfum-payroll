@@ -573,16 +573,34 @@ async function removeEmp(id){
   toast(emp.name+' removed from active roster. Past payroll kept.');
 }
 
+var PALETTE=['#C9A96E','#722F37','#2563a8','#5b2d8e','#2a7a4b','#b94040','#d4845a','#4a6fa5','#7a9e7e','#8B5E3C','#c084a0','#4e8098','#6b6b6b','#b8860b','#1a535c','#e07b39','#3d5a80','#9b2226','#606c38','#457b9d'];
+function renderEditEmpColors(currentColor){
+  var cont=document.getElementById('edit-emp-colors');if(!cont)return;
+  cont.innerHTML=PALETTE.map(function(c){
+    var sel=c.toLowerCase()===(currentColor||'').toLowerCase();
+    return '<div onclick="selectEditColor(this,\''+c+'\')" style="width:22px;height:22px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(sel?'var(--navy)':'transparent')+';box-shadow:'+(sel?'0 0 0 2px var(--gold)':'none')+';transition:transform .1s" title="'+c+'"></div>';
+  }).join('');
+}
+function selectEditColor(el,color){
+  var cont=document.getElementById('edit-emp-colors');
+  cont.querySelectorAll('div').forEach(function(d){d.style.border='2px solid transparent';d.style.boxShadow='none';});
+  el.style.border='2px solid var(--navy)';el.style.boxShadow='0 0 0 2px var(--gold)';
+  document.getElementById('edit-emp-id').dataset.color=color;
+}
 async function editEmp(id){
   var emp=emps.find(function(e){return e.id===id;});
   if(!emp)return;
+  var currentColor=EMP_COLORS[emp.name]||'#C9A96E';
   document.getElementById('edit-emp-id').value=id;
+  document.getElementById('edit-emp-id').dataset.color=currentColor;
   document.getElementById('edit-emp-name').value=emp.name;
   document.getElementById('edit-emp-rate').value=emp.rate;
+  renderEditEmpColors(currentColor);
   document.getElementById('edit-emp-modal').style.display='flex';
 }
 async function saveEditEmp(){
   var id=parseInt(document.getElementById('edit-emp-id').value);
+  var newColor=document.getElementById('edit-emp-id').dataset.color||'#C9A96E';
   var name=document.getElementById('edit-emp-name').value.trim();
   var rate=parseFloat(document.getElementById('edit-emp-rate').value)||0;
   if(!name)return;
@@ -590,6 +608,11 @@ async function saveEditEmp(){
   if(!emp)return;
   var oldName=emp.name;
   await dbPatch('employees','id=eq.'+id,{name:name,rate:rate});
+  // save new color
+  EMP_COLORS[name]=newColor;
+  var cols=getEmpColors();cols[name]=newColor;
+  if(oldName!==name)delete cols[oldName];
+  saveEmpColors(cols);
   // update schedule keys if name changed
   if(oldName!==name){
     var newAssign={};
@@ -599,9 +622,7 @@ async function saveEditEmp(){
       else newAssign[k]=schAssign[k];
     });
     schAssign=newAssign;
-    // update EMP_COLORS
-    if(EMP_COLORS[oldName]){EMP_COLORS[name]=EMP_COLORS[oldName];delete EMP_COLORS[oldName];}
-    var cols=getEmpColors();if(cols[oldName]){cols[name]=cols[oldName];delete cols[oldName];saveEmpColors(cols);}
+    if(EMP_COLORS[oldName]){delete EMP_COLORS[oldName];}
     saveSchLocal();
   }
   emp.name=name;emp.rate=rate;
@@ -668,7 +689,10 @@ function render(){
   if(!emps.length){area.innerHTML='<div class="card" style="text-align:center;color:var(--slate);padding:40px">Go to Employees and add your team first.</div>';return;}
   var dates=getWkDates();
   area.innerHTML=emps.map(function(emp){return buildBlock(emp,dates);}).join('');
-  emps.forEach(function(emp){dates.forEach(function(date){var k=key(emp.id,date),d=days[k];if(!d)return;var sv=function(id,v){var e=document.getElementById(id);if(e&&v)e.value=v;};sv('tot_'+k,d.tot);sv('br_'+k,d.br);sv('sp_'+k,d.sp);sv('hrs_'+k,d.hrs);sv('bon_'+k,d.bon);if(d.ovr>0)sv('ovr_'+k,d.ovr);var ne=document.getElementById('nc_'+k);if(ne&&d.nc>0)ne.value=d.nc;var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);paintRow(k,r);});paintTotals(emp.id);});
+  emps.forEach(function(emp){dates.forEach(function(date){var k=key(emp.id,date),d=days[k];if(!d)return;var sv=function(id,v){var e=document.getElementById(id);if(e&&v)e.value=v;};sv('tot_'+k,d.tot);sv('br_'+k,d.br);sv('sp_'+k,d.sp);sv('hrs_'+k,d.hrs);sv('bon_'+k,d.bon);if(d.ovr>0)sv('ovr_'+k,d.ovr);var ne=document.getElementById('nc_'+k);if(ne&&d.nc>0)ne.value=d.nc;var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);paintRow(k,r);});paintTotals(emp.id);
+    // restore saved eval message for this week
+    try{var savedEval=localStorage.getItem('mdp_eval_'+emp.id+'_'+dates[0]);if(savedEval){var el=document.getElementById('eval_'+emp.id);if(el)el.textContent=savedEval;}}catch(e){}
+  });
 }
 
 function buildBlock(emp,dates){
@@ -728,17 +752,41 @@ function buildBlock(emp,dates){
   +'</div>';
 }
 
-async function getEval(eid){
+function getEval(eid){
   var emp=emps.find(function(e){return e.id===eid;});if(!emp)return;
   var dates=getWkDates(),evalEl=document.getElementById('eval_'+eid);if(!evalEl)return;
-  evalEl.textContent='Analyzing…';
   var commDays=0,hourDays=0,totSales=0,totPay=0;
   dates.forEach(function(date){var d=days[key(eid,date)];if(!d||(!d.tot&&!d.hrs))return;var r=calcPay(d.nc,d.br,d.sp,d.hrs,d.bon,emp.rate,d.ovr||0);totPay+=r.pay;totSales+=(+d.tot||0);if(r.type==='c')commDays++;else hourDays++;});
   if(commDays+hourDays===0){evalEl.textContent='No data this week yet.';return;}
+  var msg='';
+  if(totSales<500){
+    var low=[
+      '💪 The week was tough, but every master started somewhere — next week, show them what you\'re made of!',
+      '🌱 Slow week, but the hustle never stops. Focus on connection and the numbers will follow.',
+      '🔥 This wasn\'t your best week — and that\'s okay. Reset, refocus, and come back stronger!'
+    ];
+    msg=low[Math.floor(Math.random()*low.length)];
+  } else if(totSales<1000){
+    var mid=[
+      '✨ Solid week, '+emp.name+'! You\'re building momentum — push a little harder and you\'ll be unstoppable.',
+      '👏 Good job this week! You\'re on the right track. One extra close per day and you\'ll be at the top.',
+      '💛 Nice work! Consistency is everything in luxury sales — keep showing up like this and the big weeks are coming.'
+    ];
+    msg=mid[Math.floor(Math.random()*mid.length)];
+  } else {
+    var high=[
+      '🏆 Incredible week, '+emp.name+'! $'+Math.round(totSales)+' in sales — that\'s what luxury selling looks like. Now let\'s make it a habit.',
+      '🌟 You crushed it this week! Top performer energy. Keep focusing on the New Collection and your commissions will keep climbing.',
+      '💎 Outstanding performance! $'+Math.round(totSales)+' proves you know how to close. Tip: upsell the scent story — customers buy the experience, not just the bottle.'
+    ];
+    msg=high[Math.floor(Math.random()*high.length)];
+  }
+  evalEl.textContent=msg;
+  // save to localStorage so it persists
   try{
-    var res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:120,system:'You are a motivational sales manager at Maison DParfum. Write a SHORT 1-2 sentence performance evaluation. Be encouraging but honest. Fun energetic 1 emoji. Max 120 chars.',messages:[{role:'user',content:emp.name+' worked '+(commDays+hourDays)+' days. '+commDays+' commission '+hourDays+' hourly. Sales $'+Math.round(totSales)+'. Pay $'+Math.round(totPay)+'.'}]})});
-    var data=await res.json();evalEl.textContent=data.content&&data.content[0]?data.content[0].text:'Keep pushing! 💪';
-  }catch(e){evalEl.textContent='Keep pushing! 🔥';}
+    var evalKey='mdp_eval_'+eid+'_'+getWkDates()[0];
+    localStorage.setItem(evalKey,msg);
+  }catch(e){}
 }
 
 async function resetWeek(){if(!confirm('Clear all data for this week?'))return;await dbDelete('payroll_days','week_start=eq.'+getWkDates()[0]);days={};render();toast('Week cleared!');}
@@ -1088,7 +1136,9 @@ init();
     <label style="font-size:9px;color:var(--slate);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px">Name</label>
     <input id="edit-emp-name" style="width:100%;border:none;border-bottom:1px solid var(--mist);padding:5px 0;font-size:12px;font-family:Inter,sans-serif;color:var(--navy);background:transparent;outline:none;margin-bottom:14px">
     <label style="font-size:9px;color:var(--slate);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px">Rate ($/hr)</label>
-    <input id="edit-emp-rate" type="number" step="0.01" style="width:100%;border:none;border-bottom:1px solid var(--mist);padding:5px 0;font-size:12px;font-family:Inter,sans-serif;color:var(--navy);background:transparent;outline:none;margin-bottom:22px">
+    <input id="edit-emp-rate" type="number" step="0.01" style="width:100%;border:none;border-bottom:1px solid var(--mist);padding:5px 0;font-size:12px;font-family:Inter,sans-serif;color:var(--navy);background:transparent;outline:none;margin-bottom:14px">
+    <label style="font-size:9px;color:var(--slate);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px">Color</label>
+    <div id="edit-emp-colors" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px"></div>
     <div style="display:flex;gap:8px">
       <button onclick="document.getElementById('edit-emp-modal').style.display='none'" style="flex:1;padding:7px;border:1px solid var(--mist);border-radius:6px;background:none;font-size:11px;cursor:pointer;color:var(--slate);font-family:Inter,sans-serif">Cancel</button>
       <button onclick="saveEditEmp()" style="flex:1;padding:7px;border:none;border-radius:6px;background:var(--navy);color:var(--white);font-size:11px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;letter-spacing:.5px">Save</button>
