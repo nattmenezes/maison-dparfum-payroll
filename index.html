@@ -761,23 +761,23 @@ function getEval(eid){
   var msg='';
   if(totSales<500){
     var low=[
-      '💪 The week was tough, but every master started somewhere — next week, show them what you\'re made of!',
-      '🌱 Slow week, but the hustle never stops. Focus on connection and the numbers will follow.',
-      '🔥 This wasn\'t your best week — and that\'s okay. Reset, refocus, and come back stronger!'
+      '💪 Tough week — every master started somewhere. Next week, show them!',
+      '🌱 Slow week. Focus on connection and the numbers will follow.',
+      '🔥 Not your best — reset, refocus, and come back stronger!'
     ];
     msg=low[Math.floor(Math.random()*low.length)];
   } else if(totSales<1000){
     var mid=[
-      '✨ Solid week, '+emp.name+'! You\'re building momentum — push a little harder and you\'ll be unstoppable.',
-      '👏 Good job this week! You\'re on the right track. One extra close per day and you\'ll be at the top.',
-      '💛 Nice work! Consistency is everything in luxury sales — keep showing up like this and the big weeks are coming.'
+      '✨ Solid week, '+emp.name+'! Keep pushing — the big numbers are close.',
+      '👏 Good job! One extra close per day and you\'ll be at the top.',
+      '💛 Consistency wins in luxury sales — the big weeks are coming!'
     ];
     msg=mid[Math.floor(Math.random()*mid.length)];
   } else {
     var high=[
-      '🏆 Incredible week, '+emp.name+'! $'+Math.round(totSales)+' in sales — that\'s what luxury selling looks like. Now let\'s make it a habit.',
-      '🌟 You crushed it this week! Top performer energy. Keep focusing on the New Collection and your commissions will keep climbing.',
-      '💎 Outstanding performance! $'+Math.round(totSales)+' proves you know how to close. Tip: upsell the scent story — customers buy the experience, not just the bottle.'
+      '🏆 Incredible, '+emp.name+'! $'+Math.round(totSales)+' — that\'s luxury selling. Make it a habit!',
+      '🌟 You crushed it! Push New Collection and your commissions keep climbing.',
+      '💎 $'+Math.round(totSales)+' — outstanding! Tip: sell the scent story, not just the bottle.'
     ];
     msg=high[Math.floor(Math.random()*high.length)];
   }
