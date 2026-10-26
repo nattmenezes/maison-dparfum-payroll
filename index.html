@@ -257,6 +257,12 @@ tfoot tr td.bv{color:#2563a8}tfoot tr td.nv{color:#9a6000}tfoot tr td.sv{color:#
       <div class="mc-name">Week Checkout</div>
       <div class="mc-desc">Track payments per week — paid & pending</div>
     </div>
+    <div class="module-card" onclick="openView('onboarding')">
+      <!-- clipboard / checklist icon -->
+      <svg class="mc-icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
+      <div class="mc-name">Onboarding</div>
+      <div class="mc-desc">Track new employee documents & checklist</div>
+    </div>
     <div class="module-card coming">
       <span class="mc-badge">Soon</span>
       <!-- bar chart icon -->
@@ -267,6 +273,21 @@ tfoot tr td.bv{color:#2563a8}tfoot tr td.nv{color:#9a6000}tfoot tr td.sv{color:#
   </div>
 
   <div class="home-footer">Maison D'Parfum LLC &nbsp;·&nbsp; Grand Canal Shoppes</div>
+</div>
+
+<!-- ═══════════════════════════════════════ ONBOARDING ═══════════════════════════════════════ -->
+<div id="view-onboarding" class="view inner">
+  <div class="inner-header">
+    <button class="inner-back" onclick="openView('home')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Home
+    </button>
+    <span class="inner-title">Onboarding</span>
+    <div></div>
+  </div>
+  <div class="inner-body" style="max-width:600px;margin:0 auto;padding:24px 16px 80px">
+    <div id="ob-list"></div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════ WAIVER ═══════════════════════════════════════ -->
@@ -295,6 +316,9 @@ tfoot tr td.bv{color:#2563a8}tfoot tr td.nv{color:#9a6000}tfoot tr td.sv{color:#
     </div>
 
     <div id="waiver-sections"></div>
+
+    <!-- Welcome message -->
+    <div id="waiver-welcome"></div>
 
     <!-- Signature block -->
     <div style="margin-top:40px;padding-top:32px;border-top:2px solid var(--mist)">
@@ -518,6 +542,7 @@ function openView(name){
   if(name==='plans') renderPlans();
   if(name==='waiver') renderWaiver();
   if(name==='checkout') renderCheckout();
+  if(name==='onboarding') renderOnboarding();
 }
 
 // ── HOME DATE ──────────────────────────────────────────────────────
@@ -1039,6 +1064,8 @@ var WAIVER_SECTIONS=[
   {num:'7',title:'Kiosk Rules & Conduct',body:'The following rules apply at all times while working at any Maison D\'Parfum kiosk location:<ul style="padding-left:18px;line-height:2;margin-top:8px"><li><strong>Video calls are not permitted</strong> during shift hours</li><li>Earphones/headphones are permitted as long as they do not interfere with customer service</li><li><strong>Eating at the kiosk is not permitted</strong> at any time</li><li>For bathroom breaks or personal breaks: the employee must <strong>announce in the group chat before leaving</strong> and <strong>announce again upon return</strong></li><li><strong>Energy Drinks:</strong> one (1) per shift is permitted. The employee acknowledges potential health risks (increased heart rate, anxiety, sleep disruption) and accepts full personal responsibility. Maison D\'Parfum LLC holds no liability in this regard.</li></ul>'},
   {num:'8',title:'Confidentiality',body:'Employees agree not to disclose any proprietary business information, including supplier contacts, pricing structures, customer lists, sales strategies, or operational systems — during or after employment. Violation of this clause may result in civil action.'},
   {num:'9',title:'Non-Compete (During Employment)',body:'While employed, the employee agrees not to work for or assist any direct competitor in the fragrance retail industry without written consent from Maison D\'Parfum LLC.'},
+  {num:'10',title:'Compensation & Pay',body:'<ul style="padding-left:18px;line-height:2"><li>If weekly total sales are <strong>below $600</strong>: the employee is paid by the hour at the agreed rate of <strong>$10/hr</strong>, plus any daily bonuses earned.</li><li>If weekly total sales reach <strong>$600–$999</strong>: the employee earns a <strong>20% commission</strong> on New Collection sales (Total Sales − Spare − Brand), plus daily bonuses.</li><li>If weekly total sales reach <strong>$1,000 or more</strong>: the employee earns a <strong>25% commission</strong> on New Collection sales, plus daily bonuses.</li><li><strong>Spare (accessories/extras):</strong> when the sales goal is achieved, the employee earns <strong>30%</strong> on Spare sales.</li><li><strong>Brand products:</strong> the employee always earns <strong>5%</strong> on Brand sales.</li><li><strong>Overtime is permitted</strong> and must be pre-approved by management.</li><li><strong>Payday runs Friday through Sunday</strong> — payment for the previous week is processed and delivered during this window.</li><li>All pay is subject to applicable federal and state tax withholding as required by law.</li></ul>'},
+  {num:'11',title:'Days Off & Vacation',body:'<ul style="padding-left:18px;line-height:2"><li>Each employee is entitled to <strong>one scheduled day off per week</strong>. Day off requests must be submitted to management <strong>every Thursday or Friday</strong> for the following week.</li><li>Additional day off requests (beyond the regular day off) may be submitted at any time. These requests are not guaranteed — however, management will always make every effort to accommodate your preferences and make you happy.</li><li>For <strong>vacation requests</strong>, the employee must submit the request <strong>at least one week in advance</strong>. Vacation approval is subject to scheduling availability and management discretion.</li></ul>'},
 ];
 
 var WAIVER_SECTIONS_PT=[
@@ -1051,6 +1078,8 @@ var WAIVER_SECTIONS_PT=[
   {num:'7',title:'Regras do Quiosque e Conduta',body:'As seguintes regras se aplicam em todos os momentos durante o trabalho em qualquer quiosque da Maison D\'Parfum:<ul style="padding-left:18px;line-height:2;margin-top:8px"><li><strong>Chamadas de vídeo não são permitidas</strong> durante o horário de trabalho</li><li>Fones de ouvido são permitidos desde que não interfiram no atendimento ao cliente</li><li><strong>Comer no quiosque não é permitido</strong> em nenhum momento</li><li>Para pausas no banheiro ou pessoais: o funcionário deve <strong>avisar no grupo antes de sair</strong> e <strong>avisar novamente ao retornar</strong></li><li><strong>Bebidas energéticas:</strong> uma (1) por turno é permitida. O funcionário reconhece os possíveis riscos à saúde (aumento da frequência cardíaca, ansiedade, distúrbios do sono) e aceita total responsabilidade pessoal. A Maison D\'Parfum LLC não se responsabiliza por isso.</li></ul>'},
   {num:'8',title:'Confidencialidade',body:'Os funcionários concordam em não divulgar nenhuma informação comercial proprietária, incluindo contatos de fornecedores, estruturas de preços, listas de clientes, estratégias de vendas ou sistemas operacionais — durante ou após o emprego. A violação desta cláusula pode resultar em ação civil.'},
   {num:'9',title:'Não Concorrência (Durante o Emprego)',body:'Durante o período de emprego, o funcionário concorda em não trabalhar para ou auxiliar qualquer concorrente direto no setor de varejo de fragrâncias sem o consentimento por escrito da Maison D\'Parfum LLC.'},
+  {num:'10',title:'Remuneração e Pagamento',body:'<ul style="padding-left:18px;line-height:2"><li>Se as vendas totais da semana ficarem <strong>abaixo de $600</strong>: o funcionário é pago por hora à taxa acordada de <strong>$10/hr</strong>, mais os bônus diários conquistados.</li><li>Se as vendas totais da semana atingirem <strong>$600–$999</strong>: o funcionário ganha <strong>20% de comissão</strong> sobre as vendas de New Collection (Vendas Totais − Spare − Brand), mais bônus diários.</li><li>Se as vendas totais da semana atingirem <strong>$1.000 ou mais</strong>: o funcionário ganha <strong>25% de comissão</strong> sobre as vendas de New Collection, mais bônus diários.</li><li><strong>Spare (acessórios/extras):</strong> quando a meta de vendas é atingida, o funcionário ganha <strong>30%</strong> sobre as vendas de Spare.</li><li><strong>Produtos Brand:</strong> o funcionário sempre ganha <strong>5%</strong> sobre as vendas de Brand.</li><li><strong>Horas extras são permitidas</strong> e devem ser aprovadas previamente pela gerência.</li><li><strong>O pagamento é realizado entre sexta-feira e domingo</strong> — o pagamento referente à semana anterior é processado e entregue nesse período.</li><li>Todo pagamento está sujeito às retenções fiscais federais e estaduais aplicáveis conforme a legislação vigente.</li></ul>'},
+  {num:'11',title:'Folgas e Férias',body:'<ul style="padding-left:18px;line-height:2"><li>Cada funcionário tem direito a <strong>uma folga semanal</strong>. O pedido de folga deve ser enviado à gerência <strong>toda quinta ou sexta-feira</strong> para a semana seguinte.</li><li>Pedidos de folgas adicionais (além da folga regular) podem ser enviados a qualquer momento. Esses pedidos não são garantidos — porém, a gerência sempre fará o máximo para atender às suas preferências e te deixar feliz.</li><li>Para pedidos de <strong>férias</strong>, o funcionário deve enviar a solicitação <strong>com pelo menos uma semana de antecedência</strong>. A aprovação está sujeita à disponibilidade de escala e à avaliação da gerência.</li></ul>'},
 ];
 var WAIVER_SECTIONS_ES=[
   {num:'1',title:'Compromiso de Capacitación',body:'Si el empleado ha sido capacitado desde cero por Maison D\'Parfum LLC — incluyendo conocimiento de productos, técnicas de ventas, educación en fragancias y operaciones de la tienda — el empleado acepta permanecer empleado por un mínimo de <strong>3 (tres) meses consecutivos</strong> a partir de la fecha en que se complete la capacitación.<br><br>Si el empleado renuncia voluntariamente antes de completar este compromiso de 3 meses, se deberá pagar una tarifa de capacitación de <strong>$500,00</strong> a Maison D\'Parfum LLC dentro de los 14 días posteriores al último día de empleo.'},
@@ -1062,12 +1091,34 @@ var WAIVER_SECTIONS_ES=[
   {num:'7',title:'Reglas del Kiosco y Conducta',body:'Las siguientes reglas aplican en todo momento mientras se trabaja en cualquier kiosco de Maison D\'Parfum:<ul style="padding-left:18px;line-height:2;margin-top:8px"><li><strong>Las videollamadas no están permitidas</strong> durante el horario de trabajo</li><li>Los audífonos están permitidos siempre que no interfieran con el servicio al cliente</li><li><strong>Comer en el kiosco no está permitido</strong> en ningún momento</li><li>Para descansos en el baño o personales: el empleado debe <strong>avisar en el grupo antes de salir</strong> y <strong>avisar nuevamente al regresar</strong></li><li><strong>Bebidas energéticas:</strong> una (1) por turno está permitida. El empleado reconoce los posibles riesgos para la salud (aumento del ritmo cardíaco, ansiedad, alteraciones del sueño) y acepta plena responsabilidad personal. Maison D\'Parfum LLC no asume ninguna responsabilidad al respecto.</li></ul>'},
   {num:'8',title:'Confidencialidad',body:'Los empleados acuerdan no divulgar ninguna información comercial propietaria, incluyendo contactos de proveedores, estructuras de precios, listas de clientes, estrategias de ventas o sistemas operativos — durante o después del empleo. La violación de esta cláusula puede resultar en acción civil.'},
   {num:'9',title:'No Competencia (Durante el Empleo)',body:'Durante el empleo, el empleado acuerda no trabajar para ni asistir a ningún competidor directo en la industria minorista de fragancias sin el consentimiento escrito de Maison D\'Parfum LLC.'},
+  {num:'10',title:'Compensación y Pago',body:'<ul style="padding-left:18px;line-height:2"><li>Si las ventas totales de la semana son <strong>menores a $600</strong>: el empleado recibe pago por hora a la tarifa acordada de <strong>$10/hr</strong>, más los bonos diarios obtenidos.</li><li>Si las ventas totales de la semana alcanzan <strong>$600–$999</strong>: el empleado gana <strong>20% de comisión</strong> sobre ventas de New Collection (Ventas Totales − Spare − Brand), más bonos diarios.</li><li>Si las ventas totales de la semana alcanzan <strong>$1,000 o más</strong>: el empleado gana <strong>25% de comisión</strong> sobre ventas de New Collection, más bonos diarios.</li><li><strong>Spare (accesorios/extras):</strong> cuando se alcanza la meta de ventas, el empleado gana <strong>30%</strong> sobre ventas de Spare.</li><li><strong>Productos Brand:</strong> el empleado siempre gana <strong>5%</strong> sobre ventas de Brand.</li><li><strong>Las horas extras están permitidas</strong> y deben ser aprobadas previamente por la gerencia.</li><li><strong>El día de pago es entre viernes y domingo</strong> — el pago correspondiente a la semana anterior se procesa y entrega en ese período.</li><li>Todo pago está sujeto a las retenciones fiscales federales y estatales aplicables según la ley.</li></ul>'},
+  {num:'11',title:'Días Libres y Vacaciones',body:'<ul style="padding-left:18px;line-height:2"><li>Cada empleado tiene derecho a <strong>un día libre por semana</strong>. La solicitud de día libre debe enviarse a la gerencia <strong>cada jueves o viernes</strong> para la semana siguiente.</li><li>Las solicitudes de días libres adicionales (más allá del día libre regular) pueden enviarse en cualquier momento. Estas solicitudes no están garantizadas — sin embargo, la gerencia siempre hará su mejor esfuerzo para atender sus preferencias y hacerte feliz.</li><li>Para solicitudes de <strong>vacaciones</strong>, el empleado debe enviar la solicitud <strong>con al menos una semana de anticipación</strong>. La aprobación está sujeta a la disponibilidad del horario y a criterio de la gerencia.</li></ul>'},
 ];
+
+var WAIVER_WELCOME={
+  en:'<div style="margin:40px 0;padding:32px;background:linear-gradient(135deg,#fdf8f0,#f5efe3);border-radius:16px;border:1px solid #e8d9c0;text-align:center">'+
+    '<div style="font-size:22px;margin-bottom:16px">✦</div>'+
+    '<p style="font-size:14px;color:var(--navy);line-height:1.9;font-style:italic;font-family:\'Cormorant Garamond\',serif;font-weight:500;max-width:480px;margin:0 auto">'+
+    'Remember — you are new to the world of fragrance sales. Give yourself time to learn, and patience to discover something beautiful and new. We are here to help each other grow. Be kind to yourself.</p>'+
+    '<div style="margin-top:20px;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:2px">Welcome to Maison D\'Parfum ✦</div></div>',
+  pt:'<div style="margin:40px 0;padding:32px;background:linear-gradient(135deg,#fdf8f0,#f5efe3);border-radius:16px;border:1px solid #e8d9c0;text-align:center">'+
+    '<div style="font-size:22px;margin-bottom:16px">✦</div>'+
+    '<p style="font-size:14px;color:var(--navy);line-height:1.9;font-style:italic;font-family:\'Cormorant Garamond\',serif;font-weight:500;max-width:480px;margin:0 auto">'+
+    'Lembre-se — você é novo no mundo das vendas de perfumes. Dê tempo a si mesmo para aprender e tenha paciência para descobrir algo novo e lindo. Estamos aqui para nos ajudar a crescer. Seja gentil consigo mesmo.</p>'+
+    '<div style="margin-top:20px;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:2px">Bem-vindo à Maison D\'Parfum ✦</div></div>',
+  es:'<div style="margin:40px 0;padding:32px;background:linear-gradient(135deg,#fdf8f0,#f5efe3);border-radius:16px;border:1px solid #e8d9c0;text-align:center">'+
+    '<div style="font-size:22px;margin-bottom:16px">✦</div>'+
+    '<p style="font-size:14px;color:var(--navy);line-height:1.9;font-style:italic;font-family:\'Cormorant Garamond\',serif;font-weight:500;max-width:480px;margin:0 auto">'+
+    'Recuerda — eres nuevo en el mundo de las ventas de fragancias. Date tiempo para aprender y paciencia para descubrir algo hermoso y nuevo. Estamos aquí para ayudarnos a crecer juntos. Sé amable contigo mismo.</p>'+
+    '<div style="margin-top:20px;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:2px">Bienvenido a Maison D\'Parfum ✦</div></div>',
+};
 
 function renderWaiver(){
   var el=document.getElementById('waiver-sections');
   if(!el)return;
   var secs=waiverLang==='pt'?WAIVER_SECTIONS_PT:waiverLang==='es'?WAIVER_SECTIONS_ES:WAIVER_SECTIONS;
+  var wel=document.getElementById('waiver-welcome');
+  if(wel)wel.innerHTML=WAIVER_WELCOME[waiverLang]||WAIVER_WELCOME.en;
   el.innerHTML=secs.map(function(s){
     return '<div style="margin-bottom:28px;padding-bottom:28px;border-bottom:1px solid var(--mist)">'+
       '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px">'+
@@ -1091,6 +1142,64 @@ function printWaiver(){
     '</style></head><body>'+content+'</body></html>');
   win.document.close();
   setTimeout(function(){win.print();},400);
+}
+
+// ── ONBOARDING ───────────────────────────────────────────────────
+var OB_ITEMS=[
+  {id:'waiver',     label:'Waiver signed',            icon:'📄'},
+  {id:'id',         label:'ID / document on file',    icon:'🪪'},
+  {id:'uniform',    label:'Uniform size noted',        icon:'👔'},
+  {id:'keys',       label:'Keys / access given',       icon:'🔑'},
+  {id:'groupchat',  label:'Added to group chat',       icon:'💬'},
+  {id:'training',   label:'Training completed',        icon:'✅'},
+  {id:'pos',        label:'POS system trained',        icon:'🖥️'},
+  {id:'schedule',   label:'First schedule assigned',   icon:'📅'},
+];
+
+function obGetData(){try{return JSON.parse(localStorage.getItem('mdp_onboarding')||'{}');}catch(e){return{};}}
+function obSave(data){localStorage.setItem('mdp_onboarding',JSON.stringify(data));}
+
+function obToggle(empId,itemId){
+  var data=obGetData();
+  if(!data[empId])data[empId]={};
+  data[empId][itemId]=!data[empId][itemId];
+  obSave(data);
+  renderOnboarding();
+}
+
+function renderOnboarding(){
+  var el=document.getElementById('ob-list');if(!el)return;
+  var data=obGetData();
+  if(!emps||!emps.length){el.innerHTML='<div style="text-align:center;padding:60px;color:var(--slate)">No employees yet. Add them in the Employees section.</div>';return;}
+  el.innerHTML=emps.map(function(emp){
+    var ed=data[emp.id]||{};
+    var done=OB_ITEMS.filter(function(i){return ed[i.id];}).length;
+    var total=OB_ITEMS.length;
+    var pct=Math.round(done/total*100);
+    var color=pct===100?'#2a7a4b':pct>=50?'#C9A96E':'#b94040';
+    var rows=OB_ITEMS.map(function(item){
+      var checked=!!ed[item.id];
+      return '<div onclick="obToggle(\''+emp.id+'\',\''+item.id+'\')" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #f5f5f7;cursor:pointer;transition:background .12s" onmouseover="this.style.background=\'#f9f9fb\'" onmouseout="this.style.background=\'\'">'+
+        '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(checked?'var(--navy)':'var(--mist)')+';background:'+(checked?'var(--navy)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s">'+
+        (checked?'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'')+
+        '</div>'+
+        '<span style="font-size:13px;">' +item.icon+'</span>'+
+        '<span style="font-size:13px;color:'+(checked?'var(--slate)':'var(--navy)')+';text-decoration:'+(checked?'line-through':'none')+';flex:1">'+item.label+'</span>'+
+        '</div>';
+    }).join('');
+    return '<div style="background:var(--white);border-radius:14px;border:1px solid var(--mist);margin-bottom:20px;overflow:hidden;box-shadow:0 2px 8px rgba(11,20,38,.06)">'+
+      '<div style="background:var(--navy);padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+      '<div style="width:28px;height:28px;border-radius:50%;background:'+(emp.color||'var(--gold)')+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--white)">'+emp.name.charAt(0)+'</div>'+
+      '<span style="color:var(--white);font-size:16px;font-weight:400">'+emp.name+'</span></div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-size:10px;color:var(--slate);letter-spacing:.5px;margin-bottom:3px">COMPLETED</div>'+
+      '<div style="font-size:18px;font-weight:700;color:'+color+'">'+done+' / '+total+'</div>'+
+      '</div></div>'+
+      '<div style="height:4px;background:var(--mist)"><div style="height:4px;background:'+color+';width:'+pct+'%;transition:width .4s"></div></div>'+
+      rows+
+      '</div>';
+  }).join('');
 }
 
 // ── FUTURE PLANS ─────────────────────────────────────────────────
