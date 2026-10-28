@@ -920,27 +920,63 @@ var schAssign={};
 
 function schGetWkDates(){var out=[];for(var i=0;i<7;i++){var d=new Date(schStart);d.setDate(schStart.getDate()+i);out.push(d.toISOString().split('T')[0]);}return out;}
 function schUpdLbl(){var dates=schGetWkDates(),el=document.getElementById('sch-week-label');if(el)el.textContent='Week of '+fd(dates[0])+' – '+fd(dates[6]);var pk=document.getElementById('sch-picker');if(pk)pk.value=dates[0];}
-function schShift(dir){schStart.setDate(schStart.getDate()+dir*7);loadSchLocal();renderSchedule();}
-function schGoToDate(val){if(!val)return;schStart=getMon(new Date(val+'T12:00:00'));loadSchLocal();renderSchedule();}
+async function schShift(dir){schStart.setDate(schStart.getDate()+dir*7);await loadSchLocal();await renderOffList();renderSchedule();}
+async function schGoToDate(val){if(!val)return;schStart=getMon(new Date(val+'T12:00:00'));await loadSchLocal();await renderOffList();renderSchedule();}
 
-function saveSchLocal(){
+async function saveSchLocal(){
   var dates=schGetWkDates();
-  localStorage.setItem('mdp_sch_'+dates[0],JSON.stringify(schAssign));
-  // save per-employee off notes
-  var offData={};
-  document.querySelectorAll('.emp-off-input').forEach(function(inp){offData[inp.getAttribute('data-emp')]=inp.value;});
-  localStorage.setItem('mdp_sch_off_'+dates[0],JSON.stringify(offData));
-  var on=document.getElementById('sch-notes-on');if(on)localStorage.setItem('mdp_sch_notes_'+dates[0],on.value);
+  var wk=dates[0];
+  // Save schedule rows
+  var rows=[];
+  Object.keys(schAssign).forEach(function(key){
+    var parts=key.split('|');
+    if(parts.length<3)return;
+    var locId=parts[0],empName=parts[1],day=parts[2];
+    var shift=schAssign[key];
+    if(shift)rows.push({week_start:wk,emp_id:empName,day:day,location_id:locId,shift:typeof shift==='string'?shift:'true'});
+  });
+  // Delete existing rows for this week then insert
+  try{
+    await fetch(BASE+'/schedule?week_start=eq.'+wk,{method:'DELETE',headers:hdr({'Prefer':'return=minimal'})});
+    if(rows.length)await dbPost('schedule',rows);
+  }catch(e){console.warn('sch save err',e);}
+  // Save off notes
+  var offRows=[];
+  document.querySelectorAll('.emp-off-input').forEach(function(inp){
+    var empName=inp.getAttribute('data-emp');
+    var val=inp.value;
+    if(val)offRows.push({week_start:wk,emp_id:empName,day:'',note:val});
+  });
+  try{
+    await fetch(BASE+'/days_off?week_start=eq.'+wk,{method:'DELETE',headers:hdr({'Prefer':'return=minimal'})});
+    if(offRows.length)await dbPost('days_off',offRows);
+  }catch(e){console.warn('off save err',e);}
+  // Save notes
+  var on=document.getElementById('sch-notes-on');
+  if(on){
+    try{await dbUpsert('schedule_notes',{week_start:wk,notes:on.value,updated_at:new Date().toISOString()});}catch(e){console.warn('notes save err',e);}
+  }
 }
-function loadSchLocal(){
-  var dates=schGetWkDates(),d=localStorage.getItem('mdp_sch_'+dates[0]);
-  schAssign=d?JSON.parse(d):{};
-  var on=document.getElementById('sch-notes-on');if(on)on.value=localStorage.getItem('mdp_sch_notes_'+dates[0])||'';
-  // off data loaded in renderOffList
+async function loadSchLocal(){
+  var dates=schGetWkDates(),wk=dates[0];
+  try{
+    var rows=await dbGet('schedule','week_start=eq.'+wk);
+    schAssign={};
+    if(rows&&rows.length)rows.forEach(function(r){schAssign[r.location_id+'|'+r.emp_id+'|'+r.day]=r.shift||true;});
+  }catch(e){schAssign={};}
+  var on=document.getElementById('sch-notes-on');
+  if(on){
+    try{var nr=await dbGet('schedule_notes','week_start=eq.'+wk);on.value=(nr&&nr[0])?nr[0].notes:'';}catch(e){on.value='';}
+  }
 }
-function renderOffList(){
+async function renderOffList(){
   var dates=schGetWkDates();
-  var saved={};try{var s=localStorage.getItem('mdp_sch_off_'+dates[0]);if(s)saved=JSON.parse(s);}catch(e){}
+  var wk=dates[0];
+  var saved={};
+  try{
+    var offRows=await dbGet('days_off','week_start=eq.'+wk);
+    if(offRows&&offRows.length)offRows.forEach(function(r){saved[r.emp_id]=r.note||'';});
+  }catch(e){}
   var names=emps.length?emps.map(function(e){return e.name;}):['Lara','Manuella','Maria','Natalia','Nasser','Rafael','Tiago'];
   var el=document.getElementById('sch-off-list');if(!el)return;
   el.innerHTML=names.map(function(name){
@@ -987,8 +1023,8 @@ async function schScreenshot(){
 function addEmpToShift(l,d,n,shift){if(!n)return;schAssign[getSchKey(l,n,d)]=shift||true;saveSchLocal();renderSchedule();}
 function removeEmpFromShift(l,d,n){delete schAssign[getSchKey(l,n,d)];saveSchLocal();renderSchedule();}
 
-function renderSchedule(){
-  schUpdLbl();loadSchLocal();renderOffList();
+async function renderSchedule(){
+  schUpdLbl();await loadSchLocal();await renderOffList();
   var dates=schGetWkDates();
   var DN=['MON','TUE','WED','THU','FRI','SAT','SUN'];
   var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1162,20 +1198,27 @@ var OB_ITEMS=[
   {id:'schedule',   label:'First schedule assigned',   icon:'📅'},
 ];
 
-function obGetData(){try{return JSON.parse(localStorage.getItem('mdp_onboarding')||'{}');}catch(e){return{};}}
-function obSave(data){localStorage.setItem('mdp_onboarding',JSON.stringify(data));}
+var obCache={};
+async function obLoadData(){
+  try{
+    var rows=await dbGet('onboarding','');
+    obCache={};
+    if(rows&&rows.length)rows.forEach(function(r){if(!obCache[r.emp_id])obCache[r.emp_id]={};obCache[r.emp_id][r.item_id]=r.done;});
+  }catch(e){obCache={};}
+  return obCache;
+}
 
-function obToggle(empId,itemId){
-  var data=obGetData();
-  if(!data[empId])data[empId]={};
-  data[empId][itemId]=!data[empId][itemId];
-  obSave(data);
+async function obToggle(empId,itemId){
+  if(!obCache[empId])obCache[empId]={};
+  obCache[empId][itemId]=!obCache[empId][itemId];
+  try{await dbUpsert('onboarding',{emp_id:empId,item_id:itemId,done:obCache[empId][itemId],updated_at:new Date().toISOString()});}catch(e){console.warn('ob save err',e);}
   renderOnboarding();
 }
 
-function renderOnboarding(){
+async function renderOnboarding(){
   var el=document.getElementById('ob-list');if(!el)return;
-  var data=obGetData();
+  await obLoadData();
+  var data=obCache;
   if(!emps||!emps.length){el.innerHTML='<div style="text-align:center;padding:60px;color:var(--slate)">No employees yet. Add them in the Employees section.</div>';return;}
   el.innerHTML=emps.map(function(emp){
     var ed=data[emp.id]||{};
